@@ -13,9 +13,11 @@ Hercules AI is a full-stack, AI-powered gym application that uses computer visio
 
 ## Setting up the Backend
 
-1. Navigate to the backend directory:
+> **Windows Users Note:** If you haven't added Conda to your system PATH, do not use the standard VSCode PowerShell or CMD terminal. You must open the **Anaconda Prompt** (or Miniconda Prompt) from your Windows Start Menu to run the backend commands.
+
+1. Open the **Anaconda Prompt** and navigate to the backend directory of this project (replace with your actual path):
    ```bash
-   cd backend
+   cd path/to/GymBroProject/backend
    ```
 2. Create and activate a virtual environment (if using Conda):
    ```bash
