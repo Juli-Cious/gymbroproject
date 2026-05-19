@@ -1,0 +1,144 @@
+{
+  "squat": {
+    "name": "Bodyweight Squat",
+    "hinges": {
+      "right_knee": [
+        "right_hip",
+        "right_knee",
+        "right_ankle"
+      ],
+      "left_knee": [
+        "left_hip",
+        "left_knee",
+        "left_ankle"
+      ],
+      "torso": [
+        "right_shoulder",
+        "right_hip",
+        "right_knee"
+      ]
+    },
+    "template_video": "data/templates/perfect_squat.mp4",
+    "template_csv": "data/templates/perfect_squat_angles.csv",
+    "fsm_rules": {
+      "primary_trigger": "right_knee",
+      "start_threshold": 160,
+      "target_threshold": 100
+    }
+  },
+  "push_up": {
+    "name": "Standard Push-Up",
+    "hinges": {
+      "right_elbow": [
+        "right_shoulder",
+        "right_elbow",
+        "right_wrist"
+      ],
+      "left_elbow": [
+        "left_shoulder",
+        "left_elbow",
+        "left_wrist"
+      ],
+      "right_plank_posture": [
+        "right_shoulder",
+        "right_hip",
+        "right_ankle"
+      ],
+      "left_plank_posture": [
+        "left_shoulder",
+        "left_hip",
+        "left_ankle"
+      ]
+    },
+    "template_video": "data/templates/perfect_push_up.mp4",
+    "template_csv": "data/templates/perfect_push_up_angles.csv",
+    "fsm_rules": {
+      "primary_trigger": "right_elbow",
+      "start_threshold": 140,
+      "target_threshold": 90
+    }
+  },
+  "bicep_curl": {
+    "name": "Barbell Bicep Curl",
+    "hinges": {
+      "right_elbow": [
+        "right_shoulder",
+        "right_elbow",
+        "right_wrist"
+      ],
+      "left_elbow": [
+        "left_shoulder",
+        "left_elbow",
+        "left_wrist"
+      ]
+    },
+    "template_video": "data/templates/perfect_curl.mp4",
+    "template_csv": "data/templates/perfect_curl_angles.csv",
+    "fsm_rules": {
+      "primary_trigger": "right_elbow",
+      "start_threshold": 160,
+      "target_threshold": 90
+    }
+  },
+  "sit_up": {
+    "name": "Standard Sit-Up",
+    "hinges": {
+      "right_torso": [
+        "right_shoulder",
+        "right_hip",
+        "right_knee"
+      ],
+      "left_torso": [
+        "left_shoulder",
+        "left_hip",
+        "left_knee"
+      ]
+    },
+    "template_video": "data/templates/perfect_sit_up.mp4",
+    "template_csv": "data/templates/perfect_sit_up_angles.csv",
+    "fsm_rules": {
+      "primary_trigger": "right_torso",
+      "start_threshold": 115,
+      "target_threshold": 65
+    }
+  },
+  "deadlift": {
+    "name": "Barbell Deadlift",
+    "hinges": {
+      "right_hip": [
+        "right_shoulder",
+        "right_hip",
+        "right_knee"
+      ],
+      "right_knee": [
+        "right_hip",
+        "right_knee",
+        "right_ankle"
+      ]
+    },
+    "template_video": "data/templates/perfect_deadlift.mp4",
+    "template_csv": "data/templates/perfect_deadlift_angles.csv",
+    "fsm_rules": {
+      "primary_trigger": "right_hip",
+      "start_threshold": 100,
+      "target_threshold": 170
+    }
+  },
+  "dumbbell_curl_right": {
+    "name": "Single-Arm Dumbbell Curl (Right)",
+    "hinges": {
+      "right_elbow": [
+        "right_shoulder",
+        "right_elbow",
+        "right_wrist"
+      ]
+    },
+    "template_video": "data/templates/perfect_dumbbell_right.mp4",
+    "template_csv": "data/templates/perfect_dumbbell_right_angles.csv",
+    "fsm_rules": {
+      "primary_trigger": "right_elbow",
+      "start_threshold": 160,
+      "target_threshold": 90
+    }
+  }
+}

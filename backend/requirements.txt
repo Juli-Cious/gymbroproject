@@ -1,0 +1,9 @@
+fastapi
+uvicorn
+python-multipart
+opencv-python
+mediapipe
+pandas
+scipy
+groq
+python-dotenv

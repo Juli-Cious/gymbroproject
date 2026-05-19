@@ -1,0 +1,162 @@
+#root {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 2rem;
+  font-family: 'Inter', system-ui, Avenir, Helvetica, Arial, sans-serif;
+  color: #ffffff;
+}
+
+body {
+  background-color: #121212;
+  margin: 0;
+}
+
+header {
+  text-align: center;
+  margin-bottom: 2rem;
+}
+
+h1 {
+  font-size: 3rem;
+  color: #ff4a4a;
+  margin-bottom: 0.5rem;
+}
+
+.upload-card, .results-card {
+  background-color: #1e1e1e;
+  padding: 2rem;
+  border-radius: 12px;
+  box-shadow: 0 4px 20px rgba(0,0,0,0.5);
+  margin-bottom: 2rem;
+}
+
+.input-group {
+  display: flex;
+  flex-direction: column;
+  margin-bottom: 1.5rem;
+}
+
+.input-group label {
+  font-weight: bold;
+  margin-bottom: 0.5rem;
+  color: #aaaaaa;
+}
+
+select, input[type="file"] {
+  padding: 0.8rem;
+  border-radius: 6px;
+  border: 1px solid #333;
+  background-color: #2a2a2a;
+  color: white;
+  font-size: 1rem;
+}
+
+.submit-btn {
+  width: 100%;
+  padding: 1rem;
+  background-color: #ff4a4a;
+  color: white;
+  border: none;
+  border-radius: 6px;
+  font-size: 1.2rem;
+  font-weight: bold;
+  cursor: pointer;
+  transition: 0.2s;
+}
+
+.submit-btn:disabled {
+  background-color: #555;
+  cursor: not-allowed;
+}
+
+.submit-btn:hover:not(:disabled) {
+  background-color: #ff6b6b;
+}
+
+/* Results styling */
+.stats-grid {
+  display: flex;
+  gap: 1rem;
+  margin-bottom: 1.5rem;
+}
+
+.stat-box {
+  flex: 1;
+  background-color: #2a2a2a;
+  padding: 1.5rem;
+  border-radius: 8px;
+  text-align: center;
+}
+
+.stat-label {
+  display: block;
+  font-size: 0.9rem;
+  color: #aaa;
+  margin-bottom: 0.5rem;
+}
+
+.stat-value {
+  display: block;
+  font-size: 2.5rem;
+  font-weight: bold;
+  color: #4ade80; /* Nice bright green */
+}
+
+.feedback-box {
+  background-color: #2a2a2a;
+  border-left: 4px solid #ff4a4a;
+  padding: 1.5rem;
+  border-radius: 0 8px 8px 0;
+}
+
+.feedback-box h3 {
+  margin-top: 0;
+  color: #ff4a4a;
+}
+
+/* Dashboard Side-by-Side */
+.dashboard-grid {
+  display: flex;
+  gap: 2rem;
+  align-items: flex-start;
+}
+
+.video-column {
+  flex: 6; /* 60% */
+}
+
+.stats-column {
+  flex: 4; /* 40% */
+}
+
+.video-wrapper {
+  background-color: #1e1e1e;
+  padding: 1rem;
+  border-radius: 12px;
+  box-shadow: 0 4px 20px rgba(0,0,0,0.5);
+  margin-bottom: 1rem;
+}
+
+.annotated-video {
+  width: 100%;
+  border-radius: 8px;
+  background-color: #000;
+}
+
+.mt-1 {
+  margin-top: 1rem;
+}
+
+.highlight-score {
+  color: #ffb703; /* Gold for gamification */
+}
+
+.stats-column .results-card {
+  margin-bottom: 0;
+}
+
+@media (max-width: 800px) {
+  .dashboard-grid {
+    flex-direction: column;
+  }
+}

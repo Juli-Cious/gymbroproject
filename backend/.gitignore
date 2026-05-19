@@ -1,0 +1,27 @@
+# Environments
+.env
+.venv
+env/
+venv/
+ENV/
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+
+# IDEs
+.vscode/
+.idea/
+
+# Data and Models
+# (We ignore heavy videos and temp processing files, but you might want to keep the models if they are small)
+data/testing_videos/
+*.mp4
+temp_*
+*.csv
+
+# OS
+.DS_Store
+Thumbs.db

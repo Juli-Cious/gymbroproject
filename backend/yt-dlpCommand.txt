@@ -1,0 +1,4 @@
+yt-dlp -f "bv[height<=480][ext=mp4]" --merge-output-format mp4 --download-sections "*00:00:36-00:00:42" "https://www.youtube.com/watch?v=xqvCmoLULNY"
+
+yt-dlp -f "bv[height<=bestHeight][ext=Extension]" --merge-output-format Extension --download-sections "*start time-end time" "youtube URL here"
+Start time and end time in the format of 00:00:00

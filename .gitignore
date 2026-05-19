@@ -1,0 +1,17 @@
+node_modules/
+.env
+__pycache__/
+*.pyc
+*.pyo
+venv/
+.venv/
+env/
+.idea/
+.vscode/
+dist/
+build/
+*.csv
+*.mp4
+*.webm
+*.log
+static/temp_*
