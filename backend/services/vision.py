@@ -82,6 +82,8 @@ class LiveTracker:
             state = self.fsm.current_state
             self.data_log.append(frame_data)
             
+            return frame_skeleton, state, self.reps_completed, self.all_reps_data
+            
         return frame_skeleton, state, self.reps_completed, self.all_reps_data
 
 

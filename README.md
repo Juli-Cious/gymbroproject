@@ -6,6 +6,15 @@ Hercules AI is a full-stack, AI-powered gym application that uses computer visio
 - `backend/`: FastAPI Python server containing the core logic (FSM tracking, MediaPipe Computer Vision, and Groq AI agent).
 - `frontend/`: React + Vite web application where users can interact with the coach.
 
+## Features
+- **Real-Time Kinematic Tracking**: Uses MediaPipe to track 3D joint angles live from your webcam.
+- **Post-Workout Analysis Dashboard**: View your gamified score, tempo, range of motion, and a `recharts` graph plotting your form against the golden standard.
+- **Persistent Lifetime Dashboard**: Track your overall progress including total workouts, lifetime reps, average score, and total calories burned. Data safely persists across sessions via a local database.
+- **Agentic AI Coach**: Powered by Groq's Llama 3 models.
+  - *Autonomous Analysis*: The AI autonomously interprets your mathematical joint data rather than relying on hardcoded rules.
+  - *Workout Memory*: The AI remembers your past sets during a session to provide contextual feedback.
+  - *Tool Use*: The AI can autonomously execute backend tools (like `adjust_exercise_difficulty`) to dynamically scale your workout parameters if you are struggling, without destroying the global config.
+
 ## Prerequisites
 - Node.js & npm (for the frontend)
 - Python 3.9+ (for the backend)

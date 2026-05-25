@@ -1,4 +1,5 @@
 import { useState, useRef, useEffect } from 'react'
+import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, ReferenceLine } from 'recharts'
 import './App.css'
 
 function App() {
@@ -6,9 +7,45 @@ function App() {
   const [videoUrl, setVideoUrl] = useState(null)
   
   const [showSkeleton, setShowSkeleton] = useState(true)
+  const showSkeletonRef = useRef(true)
+
+  const toggleSkeleton = () => {
+    setShowSkeleton(!showSkeleton)
+    showSkeletonRef.current = !showSkeleton
+  }
+
   const [currentState, setCurrentState] = useState("Resting")
   const [reps, setReps] = useState(0)
   const [isLive, setIsLive] = useState(false)
+  const [isWebcamActive, setIsWebcamActive] = useState(false)
+  
+  const [summaryData, setSummaryData] = useState(null)
+  const [isGeneratingReport, setIsGeneratingReport] = useState(false)
+  const [userStats, setUserStats] = useState({ workouts: 0, total_reps: 0, average_score: 0.0, calories: 0.0 })
+
+  const fetchStats = async () => {
+    try {
+      const response = await fetch('http://localhost:8000/stats')
+      const data = await response.json()
+      setUserStats(data)
+    } catch (e) {
+      console.error("Failed to fetch stats", e)
+    }
+  }
+
+  const clearStats = async () => {
+    if(!window.confirm("Are you sure you want to wipe your persistent workout data?")) return;
+    try {
+      await fetch('http://localhost:8000/clear_stats', { method: 'POST' })
+      fetchStats()
+    } catch (e) {
+      console.error("Failed to clear stats", e)
+    }
+  }
+
+  useEffect(() => {
+    fetchStats()
+  }, [])
 
   const videoRef = useRef(null)
   const overlayCanvasRef = useRef(null)
@@ -23,6 +60,7 @@ function App() {
       if (streamRef.current) {
         streamRef.current.getTracks().forEach(track => track.stop())
         streamRef.current = null
+        setIsWebcamActive(false)
       }
     }
   }
@@ -32,6 +70,7 @@ function App() {
     try {
       const stream = await navigator.mediaDevices.getUserMedia({ video: true })
       streamRef.current = stream
+      setIsWebcamActive(true)
       setVideoUrl(null)
       alert("Webcam connected!")
     } catch (err) {
@@ -47,7 +86,17 @@ function App() {
   }, [isLive])
 
   const stopTracking = () => {
+    if (wsRef.current && wsRef.current.readyState === WebSocket.OPEN) {
+      wsRef.current.send(JSON.stringify({ command: 'stop' }));
+      setIsGeneratingReport(true);
+      return;
+    }
+    finishTrackingCleanup();
+  }
+
+  const finishTrackingCleanup = () => {
     setIsLive(false)
+    setIsGeneratingReport(false)
     if (wsRef.current) {
       wsRef.current.close()
     }
@@ -57,6 +106,7 @@ function App() {
     if (streamRef.current) {
       streamRef.current.getTracks().forEach(track => track.stop())
       streamRef.current = null
+      setIsWebcamActive(false)
     }
     if (videoRef.current) {
       videoRef.current.srcObject = null
@@ -90,6 +140,9 @@ function App() {
         }
         // FIRE FIRST FRAME to start the loop
         processFrame()
+      } else if (data.type === "summary") {
+        setSummaryData(data.stats);
+        finishTrackingCleanup();
       } else if (data.coordinates) {
         setCurrentState(prev => prev !== data.state ? data.state : prev)
         setReps(prev => prev !== data.rep_count ? data.rep_count : prev)
@@ -157,7 +210,7 @@ function App() {
 
     ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-    if (showSkeleton && frameData && frameData.length > 0) {
+    if (showSkeletonRef.current && frameData && frameData.length > 0) {
       frameData.forEach(points => {
         if (points.length === 3) {
           ctx.beginPath();
@@ -187,8 +240,36 @@ function App() {
       </header>
 
       <main>
-        {!isLive && (
-          <form className="upload-card">
+        {!isLive && !summaryData && (
+          <>
+            <div className="results-card" style={{ marginBottom: '30px' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <h2 style={{ margin: 0, textAlign: 'left' }}>Lifetime Dashboard</h2>
+                <button onClick={clearStats} className="submit-btn" style={{ padding: '8px 12px', fontSize: '0.8rem', backgroundColor: '#ff4444', width: 'auto', margin: 0 }}>
+                  Clear Data
+                </button>
+              </div>
+              <div className="stats-grid" style={{ marginTop: '20px' }}>
+                <div className="stat-box">
+                  <span className="stat-label">Total Workouts</span>
+                  <span className="stat-value">{userStats.workouts}</span>
+                </div>
+                <div className="stat-box">
+                  <span className="stat-label">Total Reps</span>
+                  <span className="stat-value">{userStats.total_reps}</span>
+                </div>
+                <div className="stat-box">
+                  <span className="stat-label">Avg Score</span>
+                  <span className="stat-value highlight-score">{userStats.average_score}/10</span>
+                </div>
+                <div className="stat-box">
+                  <span className="stat-label">Calories Burned</span>
+                  <span className="stat-value">{userStats.calories} kcal</span>
+                </div>
+              </div>
+            </div>
+
+            <form className="upload-card">
             <div className="input-group">
               <label>Select Exercise:</label>
               <select value={exercise} onChange={(e) => setExercise(e.target.value)}>
@@ -203,17 +284,18 @@ function App() {
             <div className="input-group">
               <label>Input Source:</label>
               <div style={{ display: 'flex', gap: '10px' }}>
-                <button onClick={startWebcam} className="submit-btn" style={{flex: 1, backgroundColor: streamRef.current ? '#444' : '#007BFF'}}>
-                  {streamRef.current ? "Webcam Active" : "Use Webcam"}
+                <button onClick={startWebcam} className="submit-btn" style={{flex: 1, backgroundColor: isWebcamActive ? '#444' : '#007BFF'}}>
+                  {isWebcamActive ? "Webcam Active" : "Use Webcam"}
                 </button>
                 <input type="file" accept="video/mp4,video/quicktime" onChange={handleFileChange} style={{flex: 1}}/>
               </div>
             </div>
 
-            <button onClick={startTracking} disabled={!videoUrl && !streamRef.current} className="submit-btn">
+            <button onClick={startTracking} disabled={!videoUrl && !isWebcamActive} className="submit-btn">
               Start Live Tracking
             </button>
           </form>
+          </>
         )}
 
         {isLive && (
@@ -257,10 +339,12 @@ function App() {
                 </div>
               </div>
               <div style={{ display: 'flex', gap: '10px', marginTop: '10px' }}>
-                <button onClick={() => setShowSkeleton(!showSkeleton)} className="submit-btn" style={{ flex: 1, backgroundColor: '#333' }}>
+                <button onClick={toggleSkeleton} className="submit-btn" style={{ flex: 1, backgroundColor: '#333' }}>
                   {showSkeleton ? 'Hide Skeleton' : 'Show Skeleton'}
                 </button>
-                <button onClick={stopTracking} className="submit-btn" style={{ flex: 1, backgroundColor: '#ff4444' }}>Stop Tracking</button>
+                <button onClick={stopTracking} disabled={isGeneratingReport} className="submit-btn" style={{ flex: 1, backgroundColor: '#ff4444' }}>
+                  {isGeneratingReport ? 'Generating Report...' : 'Stop Tracking'}
+                </button>
               </div>
             </div>
 
@@ -284,6 +368,54 @@ function App() {
                 </div>
               </div>
             </div>
+          </div>
+        )}
+
+        {summaryData && !isLive && (
+          <div className="results-card" style={{ maxWidth: '800px', margin: '0 auto', textAlign: 'left' }}>
+            <h2>Post-Workout Analysis</h2>
+            
+            <div className="stats-grid" style={{ marginBottom: '20px' }}>
+              <div className="stat-box">
+                <span className="stat-label">Score</span>
+                <span className="stat-value highlight-score">{summaryData.score}/10</span>
+              </div>
+              <div className="stat-box">
+                <span className="stat-label">Reps Completed</span>
+                <span className="stat-value">{summaryData.reps}</span>
+              </div>
+              <div className="stat-box">
+                <span className="stat-label">Range of Motion</span>
+                <span className="stat-value">{summaryData.rom}</span>
+              </div>
+              <div className="stat-box">
+                <span className="stat-label">Avg Tempo</span>
+                <span className="stat-value">{summaryData.tempo}</span>
+              </div>
+            </div>
+
+            <div className="feedback-box" style={{ marginBottom: '20px' }}>
+              <h3>🦾 Coach Hercules Says:</h3>
+              <p>{summaryData.coach_feedback}</p>
+            </div>
+
+            <div className="chart-container" style={{ height: '300px', backgroundColor: '#1e1e1e', padding: '20px', borderRadius: '12px' }}>
+              <h3 style={{ marginBottom: '15px', color: '#fff', fontSize: '1rem' }}>Movement Angle vs Target</h3>
+              <ResponsiveContainer width="100%" height="100%">
+                <LineChart data={summaryData.graph_data}>
+                  <CartesianGrid strokeDasharray="3 3" stroke="#333" />
+                  <XAxis dataKey="time" stroke="#aaa" label={{ value: 'Time (s)', position: 'insideBottomRight', offset: -5, fill: '#aaa' }} tickFormatter={(val) => val.toFixed(1)} />
+                  <YAxis stroke="#aaa" domain={['auto', 'auto']} />
+                  <Tooltip contentStyle={{ backgroundColor: '#222', border: '1px solid #444', color: '#fff' }} />
+                  <ReferenceLine y={summaryData.target_angle} label={{ position: 'insideTopLeft', value: 'Target Angle', fill: '#ff4444' }} stroke="#ff4444" strokeDasharray="3 3" />
+                  <Line type="monotone" dataKey="angle" stroke="#00ffff" strokeWidth={3} dot={false} isAnimationActive={true} />
+                </LineChart>
+              </ResponsiveContainer>
+            </div>
+
+            <button onClick={() => { setSummaryData(null); fetchStats(); }} className="submit-btn" style={{ marginTop: '30px' }}>
+              Back to Main Menu
+            </button>
           </div>
         )}
         

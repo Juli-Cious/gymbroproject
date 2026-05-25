@@ -6,6 +6,7 @@ import json
 import base64
 import cv2
 import numpy as np
+import copy
 from fastapi.middleware.cors import CORSMiddleware
 
 # Import your custom functions!
@@ -20,6 +21,31 @@ app.mount("/static", StaticFiles(directory="static"), name="static")
 # Load exercise rules
 with open("configs/exercises.json", "r") as f:
     exercises_db = json.load(f)
+
+# Store modified target angles for the current session
+session_overrides = {}
+
+STATS_FILE = "data/user_stats.json"
+
+def load_stats():
+    if not os.path.exists(STATS_FILE):
+        return {"workouts": 0, "total_reps": 0, "average_score": 0.0, "calories": 0.0}
+    try:
+        with open(STATS_FILE, "r") as f:
+            return json.load(f)
+    except:
+        return {"workouts": 0, "total_reps": 0, "average_score": 0.0, "calories": 0.0}
+
+def save_stats(reps, score):
+    if reps == 0: return # Don't log 0 rep workouts
+    stats = load_stats()
+    stats["workouts"] += 1
+    stats["total_reps"] += reps
+    old_total_score = stats["average_score"] * (stats["workouts"] - 1)
+    stats["average_score"] = round((old_total_score + score) / stats["workouts"], 1)
+    stats["calories"] = round(stats["calories"] + (reps * 0.5), 1)
+    with open(STATS_FILE, "w") as f:
+        json.dump(stats, f)
 
 # This allows your React frontend to talk to this Python backend without security errors
 app.add_middleware(
@@ -42,11 +68,123 @@ async def websocket_endpoint(websocket: WebSocket):
             # Receive data from React
             data = await websocket.receive_json()
             
+            if "command" in data and data["command"] == "stop":
+                if tracker:
+                    # Calculate final stats from tracker
+                    rules = tracker.exercise_rules
+                    target_angle = rules['fsm_rules']['target_threshold']
+                    start_angle = rules['fsm_rules']['start_threshold']
+                    trigger_key = rules['fsm_rules']['primary_trigger']
+                    angle_key = f"{trigger_key}_angle"
+                    
+                    extreme_angle = start_angle # Fallback
+                    if tracker.data_log:
+                        angles = [f.get(angle_key, start_angle) for f in tracker.data_log if angle_key in f]
+                        if target_angle > start_angle:
+                            extreme_angle = max(angles)
+                        else:
+                            extreme_angle = min(angles)
+                        
+                    # Calculate penalty
+                    is_overshoot = (target_angle < start_angle and extreme_angle < target_angle) or (target_angle > start_angle and extreme_angle > target_angle)
+                    degrees_off = abs(extreme_angle - target_angle)
+                    
+                    if is_overshoot:
+                        # Lenient penalty for going "too deep" (e.g. deep squat)
+                        penalty = degrees_off / 15
+                    else:
+                        # Strict penalty for quarter-reps
+                        penalty = degrees_off / 5
+                        
+                    score = max(0, min(10, 10 - penalty)) 
+                    score_rounded = round(score, 1)
+
+                    total_possible_degrees = abs(start_angle - target_angle)
+                    degrees_moved = abs(start_angle - extreme_angle)
+                    rom_percentage = 0
+                    if total_possible_degrees > 0:
+                        rom = (degrees_moved / total_possible_degrees) * 100
+                        rom_percentage = round(min(100, rom))
+
+                    avg_rep_time = 0
+                    if tracker.all_reps_data and len(tracker.all_reps_data) > 0:
+                        total_time_ms = 0
+                        for rep_data in tracker.all_reps_data:
+                            if len(rep_data) > 0:
+                                rep_start_ms = rep_data[0]['timestamp_ms']
+                                rep_end_ms = rep_data[-1]['timestamp_ms']
+                                total_time_ms += (rep_end_ms - rep_start_ms)
+                        avg_rep_time = round((total_time_ms / len(tracker.all_reps_data)) / 1000.0, 1)
+
+                    rep_consistency = "N/A"
+                    if len(tracker.all_reps_data) >= 2:
+                        try:
+                            first_rep_lowest = min([f.get(angle_key, 0) for f in tracker.all_reps_data[0] if angle_key in f])
+                            last_rep_lowest = min([f.get(angle_key, 0) for f in tracker.all_reps_data[-1] if angle_key in f])
+                            diff = abs(first_rep_lowest - last_rep_lowest)
+                            
+                            if diff < 5:
+                                rep_consistency = "Consistent form maintained."
+                            else:
+                                rep_consistency = f"Form shifted by {round(diff)}° on final rep."
+                        except Exception:
+                            pass
+
+                    # Extract graph data
+                    graph_data = []
+                    for f in tracker.data_log:
+                        if angle_key in f:
+                            graph_data.append({
+                                "time": f.get("timestamp_ms", 0),
+                                "angle": f.get(angle_key)
+                            })
+
+                    # Normalize timestamps to start at 0
+                    if graph_data:
+                        start_time = graph_data[0]["time"]
+                        for p in graph_data:
+                            p["time"] = (p["time"] - start_time) / 1000.0  # Seconds
+
+                    # Generate AI Feedback
+                    feedback, tool_action = generate_coach_feedback(
+                        exercise_name=rules["name"],
+                        reps_completed=tracker.reps_completed,
+                        lowest_angle=extreme_angle,
+                        target_angle=target_angle,
+                        score=score_rounded,
+                        tempo=avg_rep_time,
+                        consistency=rep_consistency
+                    )
+                    
+                    if tool_action:
+                        session_overrides[tracker.exercise_key] = tool_action["new_target_angle"]
+
+                    # Save persistent stats
+                    save_stats(tracker.reps_completed, score_rounded)
+
+                    await websocket.send_json({
+                        "type": "summary",
+                        "stats": {
+                            "reps": tracker.reps_completed,
+                            "score": score_rounded,
+                            "rom": f"{rom_percentage}%",
+                            "tempo": f"{avg_rep_time}s",
+                            "consistency": rep_consistency,
+                            "coach_feedback": feedback,
+                            "graph_data": graph_data,
+                            "target_angle": target_angle
+                        }
+                    })
+                break
+                
             if "setup" in data:
                 exercise_name = data["exercise"]
-                rules = exercises_db.get(exercise_name)
+                rules = copy.deepcopy(exercises_db.get(exercise_name))
                 if rules:
+                    if exercise_name in session_overrides:
+                        rules['fsm_rules']['target_threshold'] = session_overrides[exercise_name]
                     tracker = LiveTracker(exercise_rules=rules)
+                    tracker.exercise_key = exercise_name
                     await websocket.send_json({"status": "ready"})
                 else:
                     await websocket.send_json({"error": "Exercise not found"})
@@ -74,8 +212,18 @@ async def websocket_endpoint(websocket: WebSocket):
 
     except WebSocketDisconnect:
         print("WebSocket disconnected. User finished the set or closed the camera.")
-        # We could send final stats to Groq here if we wanted to process it post-set
 
+
+@app.get("/stats")
+def get_stats():
+    return load_stats()
+
+@app.post("/clear_stats")
+def clear_stats():
+    stats = {"workouts": 0, "total_reps": 0, "average_score": 0.0, "calories": 0.0}
+    with open(STATS_FILE, "w") as f:
+        json.dump(stats, f)
+    return {"status": "cleared"}
 
 @app.post("/analyze")
 async def analyze_video(
@@ -93,9 +241,12 @@ async def analyze_video(
         shutil.copyfileobj(video.file, buffer)
 
     try:
-        rules = exercises_db.get(exercise_name)
+        rules = copy.deepcopy(exercises_db.get(exercise_name))
         if not rules:
             raise ValueError(f"Exercise '{exercise_name}' not found in configs/exercises.json")
+            
+        if exercise_name in session_overrides:
+            rules['fsm_rules']['target_threshold'] = session_overrides[exercise_name]
 
         # 2. Run Vision & FSM Math
         reps_completed, lowest_angle, skeleton_data, fps, all_reps_data = extract_kinematics(
@@ -153,13 +304,21 @@ async def analyze_video(
                 pass
         
         # 3. Ask Groq for the feedback
-        feedback = generate_coach_feedback(
+        feedback, tool_action = generate_coach_feedback(
             exercise_name=rules["name"],
             reps_completed=reps_completed,
             lowest_angle=lowest_angle,
             target_angle=target_angle,
-            score=score_rounded
+            score=score_rounded,
+            tempo=avg_rep_time,
+            consistency=rep_consistency
         )
+        
+        if tool_action:
+            session_overrides[exercise_name] = tool_action["new_target_angle"]
+
+        # Save persistent stats for uploaded videos too
+        save_stats(reps_completed, score_rounded)
 
         # 4. Clean up the temp video
         if os.path.exists(temp_video_path):
