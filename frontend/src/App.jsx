@@ -14,7 +14,7 @@ function App() {
     showSkeletonRef.current = !showSkeleton
   }
 
-  const [currentState, setCurrentState] = useState("Resting")
+  const [currentState, setCurrentState] = useState("ALIGNING")
   const [reps, setReps] = useState(0)
   const [isLive, setIsLive] = useState(false)
   const [isWebcamActive, setIsWebcamActive] = useState(false)
@@ -122,7 +122,7 @@ function App() {
 
     setIsLive(true)
     setReps(0)
-    setCurrentState("Resting")
+    setCurrentState("ALIGNING")
 
     // Open WebSocket
     wsRef.current = new WebSocket('ws://localhost:8000/ws/track')
@@ -326,7 +326,7 @@ function App() {
                   top: '15px',
                   left: '15px',
                   backgroundColor: 'rgba(0,0,0,0.8)',
-                  color: currentState === 'Resting' ? '#ff4444' : '#00ff00',
+                  color: currentState === 'Resting' ? '#ff4444' : (currentState === 'ALIGNING' ? '#ffff00' : '#00ff00'),
                   padding: '8px 12px',
                   borderRadius: '6px',
                   fontWeight: 'bold',
@@ -337,6 +337,25 @@ function App() {
                 }}>
                   State: {currentState}
                 </div>
+                {currentState === 'ALIGNING' && (
+                  <div style={{
+                    position: 'absolute',
+                    top: '50%',
+                    left: '50%',
+                    transform: 'translate(-50%, -50%)',
+                    backgroundColor: 'rgba(255, 0, 0, 0.9)',
+                    color: 'white',
+                    padding: '20px 30px',
+                    borderRadius: '10px',
+                    fontWeight: 'bold',
+                    fontSize: '1.5rem',
+                    textAlign: 'center',
+                    zIndex: 20
+                  }}>
+                    ⚠️ ALIGNING CAMERA<br/>
+                    <span style={{fontSize: '1rem'}}>Step back! Ensure your full body is in the frame.</span>
+                  </div>
+                )}
               </div>
               <div style={{ display: 'flex', gap: '10px', marginTop: '10px' }}>
                 <button onClick={toggleSkeleton} className="submit-btn" style={{ flex: 1, backgroundColor: '#333' }}>
@@ -362,8 +381,9 @@ function App() {
                 <div className="feedback-box">
                   <h3>🦾 Coach Hercules Says:</h3>
                   <p>
-                    {currentState === "Resting" ? "Ready when you are. Get in position." : 
-                    (currentState === "ACTIVE" ? "⚠️ HOLD AND GO LOWER!" : "🔥 FORM LOOKS GOOD!")}
+                    {currentState === "ALIGNING" ? "I can't see you properly. Step back and show your full body." :
+                    (currentState === "Resting" ? "Ready when you are. Get in position." : 
+                    (currentState === "ACTIVE" ? "⚠️ HOLD AND GO LOWER!" : "🔥 FORM LOOKS GOOD!"))}
                   </p>
                 </div>
               </div>

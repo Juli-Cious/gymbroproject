@@ -51,9 +51,15 @@ class LiveTracker:
             world_landmarks = detection_result.pose_world_landmarks[0]
             
             frame_data = {'timestamp_ms': timestamp_ms}
+            is_aligned = True
             
             for hinge_name, joints in self.exercise_rules['hinges'].items():
                 idx1, idx2, idx3 = LANDMARK_MAP[joints[0]], LANDMARK_MAP[joints[1]], LANDMARK_MAP[joints[2]]
+                
+                for idx in (idx1, idx2, idx3):
+                    lm = landmarks[idx]
+                    if lm.x < 0.01 or lm.x > 0.99 or lm.y < 0.01 or lm.y > 0.99:
+                        is_aligned = False
                 
                 frame_skeleton.append([
                     {"x": landmarks[idx1].x, "y": landmarks[idx1].y},
@@ -72,6 +78,7 @@ class LiveTracker:
             trigger_angle = frame_data[f"{trigger_key}_angle"]
             
             frame_data['fsm_state'] = self.fsm.current_state 
+            frame_data['is_aligned'] = is_aligned
             
             rep_finished, rep_data = self.fsm.update(trigger_angle, frame_data)
             
@@ -127,12 +134,18 @@ def extract_kinematics(video_path, output_csv, exercise_rules, model_path='data/
             # --- DYNAMIC 3D MATH & DRAWING ---
             frame_data = {'timestamp_ms': frame_timestamp_ms}
             frame_skeleton = []
+            is_aligned = True
             
             # Loop through however many hinges are defined in the JSON!
             for hinge_name, joints in exercise_rules['hinges'].items():
                 
                 # 1. Look up the MediaPipe IDs
                 idx1, idx2, idx3 = LANDMARK_MAP[joints[0]], LANDMARK_MAP[joints[1]], LANDMARK_MAP[joints[2]]
+                
+                for idx in (idx1, idx2, idx3):
+                    lm = landmarks[idx]
+                    if lm.x < 0.01 or lm.x > 0.99 or lm.y < 0.01 or lm.y > 0.99:
+                        is_aligned = False
                 
                 # 2. Draw them on the screen (Dynamic lines for everything!)
                 if display_video:
@@ -168,6 +181,7 @@ def extract_kinematics(video_path, output_csv, exercise_rules, model_path='data/
             trigger_angle = frame_data[f"{trigger_key}_angle"]
             
             frame_data['fsm_state'] = fsm.current_state 
+            frame_data['is_aligned'] = is_aligned
             
             # Feed the FSM the specific angle it needs to count reps
             rep_finished, rep_data = fsm.update(trigger_angle, frame_data)

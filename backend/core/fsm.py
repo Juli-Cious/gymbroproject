@@ -8,12 +8,20 @@ class HerculesFSM:
         # If start is higher than target, we go down first (Squat). Otherwise, up first (Deadlift).
         self.flexion_first = self.start_thresh > self.target_thresh
         
-        self.current_state = "RESTING"
+        self.current_state = "ALIGNING"
         self.hit_depth = False
         self.rep_data = []
 
     def update(self, angle, frame_data):
         rep_finished = False
+        
+        # --- ALIGNMENT GATEKEEPER ---
+        if self.current_state == "ALIGNING":
+            if frame_data.get('is_aligned', False):
+                self.current_state = "RESTING"
+            else:
+                return False, []
+                
         self.rep_data.append(frame_data)
         
         # --- PATH A: SQUATS, PUSH-UPS, CURLS (Start High -> Target Low -> Start High) ---
