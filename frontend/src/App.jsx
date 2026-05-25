@@ -249,23 +249,28 @@ function App() {
                   Clear Data
                 </button>
               </div>
-              <div className="stats-grid" style={{ marginTop: '20px' }}>
-                <div className="stat-box">
-                  <span className="stat-label">Total Workouts</span>
-                  <span className="stat-value">{userStats.workouts}</span>
-                </div>
-                <div className="stat-box">
-                  <span className="stat-label">Total Reps</span>
-                  <span className="stat-value">{userStats.total_reps}</span>
-                </div>
-                <div className="stat-box">
-                  <span className="stat-label">Avg Score</span>
-                  <span className="stat-value highlight-score">{userStats.average_score}/10</span>
-                </div>
-                <div className="stat-box">
-                  <span className="stat-label">Calories Burned</span>
-                  <span className="stat-value">{userStats.calories} kcal</span>
-                </div>
+              <div className="workout-feed" style={{ marginTop: '20px', maxHeight: '350px', overflowY: 'auto', backgroundColor: '#1a1a1a', borderRadius: '12px', border: '1px solid #333' }}>
+                {userStats.history && userStats.history.length > 0 ? (
+                  userStats.history.map((workout, idx) => (
+                    <div key={idx} style={{ padding: '15px 20px', borderBottom: idx !== userStats.history.length - 1 ? '1px solid #333' : 'none', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                      <div style={{ textAlign: 'left' }}>
+                        <strong style={{ color: '#00ffff', fontSize: '1.1rem', letterSpacing: '0.5px' }}>{workout.exercise}</strong>
+                        <div style={{ fontSize: '0.85rem', color: '#888', marginTop: '5px' }}>{workout.date}</div>
+                      </div>
+                      <div style={{ textAlign: 'right' }}>
+                        <div style={{ color: '#fff', fontWeight: 'bold', fontSize: '1.05rem' }}>{workout.reps} Reps</div>
+                        <div style={{ fontSize: '0.9rem', color: workout.score >= 8 ? '#00ff00' : workout.score >= 5 ? '#ffaa00' : '#ff4444', marginTop: '3px', fontWeight: '500' }}>
+                          Score: {workout.score}/10
+                        </div>
+                      </div>
+                    </div>
+                  ))
+                ) : (
+                  <div style={{ padding: '40px 20px', textAlign: 'center', color: '#888' }}>
+                    <p style={{ margin: 0, fontSize: '1.1rem' }}>No workouts yet.</p>
+                    <p style={{ margin: '5px 0 0 0', fontSize: '0.9rem' }}>Upload a video or step in front of the webcam to start!</p>
+                  </div>
+                )}
               </div>
             </div>
 
@@ -420,7 +425,7 @@ function App() {
             </div>
 
             <div className="chart-container" style={{ height: '300px', backgroundColor: '#1e1e1e', padding: '20px', borderRadius: '12px' }}>
-              <h3 style={{ marginBottom: '15px', color: '#fff', fontSize: '1rem' }}>Movement Angle vs Target</h3>
+              <h3 style={{ marginBottom: '15px', color: '#fff', fontSize: '1rem' }}>Movement Angle vs Golden Standard</h3>
               <ResponsiveContainer width="100%" height="100%">
                 <LineChart data={summaryData.graph_data}>
                   <CartesianGrid strokeDasharray="3 3" stroke="#333" />
@@ -428,7 +433,8 @@ function App() {
                   <YAxis stroke="#aaa" domain={['auto', 'auto']} />
                   <Tooltip contentStyle={{ backgroundColor: '#222', border: '1px solid #444', color: '#fff' }} />
                   <ReferenceLine y={summaryData.target_angle} label={{ position: 'insideTopLeft', value: 'Target Angle', fill: '#ff4444' }} stroke="#ff4444" strokeDasharray="3 3" />
-                  <Line type="monotone" dataKey="angle" stroke="#00ffff" strokeWidth={3} dot={false} isAnimationActive={true} />
+                  <Line type="monotone" dataKey="template_angle" name="Golden Standard" stroke="#ffff00" strokeWidth={3} strokeDasharray="5 5" dot={false} isAnimationActive={true} />
+                  <Line type="monotone" dataKey="angle" name="Your Form" stroke="#00ffff" strokeWidth={3} dot={false} isAnimationActive={true} />
                 </LineChart>
               </ResponsiveContainer>
             </div>

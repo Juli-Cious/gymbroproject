@@ -12,6 +12,9 @@ from fastapi.middleware.cors import CORSMiddleware
 # Import your custom functions!
 from services.vision import extract_kinematics, LiveTracker
 from services.agent import generate_coach_feedback
+from services.analyzer import evaluate_rep, build_multi_rep_dtw
+import pandas as pd
+from scipy.signal import savgol_filter
 
 app = FastAPI(title="Hercules AI Engine")
 
@@ -29,14 +32,17 @@ STATS_FILE = "data/user_stats.json"
 
 def load_stats():
     if not os.path.exists(STATS_FILE):
-        return {"workouts": 0, "total_reps": 0, "average_score": 0.0, "calories": 0.0}
+        return {"workouts": 0, "total_reps": 0, "average_score": 0.0, "calories": 0.0, "history": []}
     try:
         with open(STATS_FILE, "r") as f:
-            return json.load(f)
+            stats = json.load(f)
+            if "history" not in stats:
+                stats["history"] = []
+            return stats
     except:
-        return {"workouts": 0, "total_reps": 0, "average_score": 0.0, "calories": 0.0}
+        return {"workouts": 0, "total_reps": 0, "average_score": 0.0, "calories": 0.0, "history": []}
 
-def save_stats(reps, score):
+def save_stats(exercise_name, reps, score):
     if reps == 0: return # Don't log 0 rep workouts
     stats = load_stats()
     stats["workouts"] += 1
@@ -44,6 +50,19 @@ def save_stats(reps, score):
     old_total_score = stats["average_score"] * (stats["workouts"] - 1)
     stats["average_score"] = round((old_total_score + score) / stats["workouts"], 1)
     stats["calories"] = round(stats["calories"] + (reps * 0.5), 1)
+    
+    import datetime
+    now = datetime.datetime.now().strftime("%b %d, %Y - %I:%M %p")
+    
+    stats["history"].insert(0, {
+        "date": now,
+        "exercise": exercise_name.replace('_', ' ').title(),
+        "reps": reps,
+        "score": score
+    })
+    
+    stats["history"] = stats["history"][:50]
+    
     with open(STATS_FILE, "w") as f:
         json.dump(stats, f)
 
@@ -130,20 +149,10 @@ async def websocket_endpoint(websocket: WebSocket):
                         except Exception:
                             pass
 
-                    # Extract graph data
-                    graph_data = []
-                    for f in tracker.data_log:
-                        if angle_key in f:
-                            graph_data.append({
-                                "time": f.get("timestamp_ms", 0),
-                                "angle": f.get(angle_key)
-                            })
-
-                    # Normalize timestamps to start at 0
-                    if graph_data:
-                        start_time = graph_data[0]["time"]
-                        for p in graph_data:
-                            p["time"] = (p["time"] - start_time) / 1000.0  # Seconds
+                    # --- LIVE DTW EVALUATION ---
+                    dtw_score, graph_data = build_multi_rep_dtw(
+                        tracker.data_log, tracker.all_reps_data, rules, rules.get('template_csv')
+                    )
 
                     # Generate AI Feedback
                     feedback, tool_action = generate_coach_feedback(
@@ -153,14 +162,15 @@ async def websocket_endpoint(websocket: WebSocket):
                         target_angle=target_angle,
                         score=score_rounded,
                         tempo=avg_rep_time,
-                        consistency=rep_consistency
+                        consistency=rep_consistency,
+                        dtw_score=round(dtw_score, 1) if type(dtw_score) == float else dtw_score
                     )
                     
                     if tool_action:
                         session_overrides[tracker.exercise_key] = tool_action["new_target_angle"]
 
                     # Save persistent stats
-                    save_stats(tracker.reps_completed, score_rounded)
+                    save_stats(rules["name"], tracker.reps_completed, score_rounded)
 
                     await websocket.send_json({
                         "type": "summary",
@@ -260,6 +270,14 @@ async def analyze_video(
         target_angle = rules['fsm_rules']['target_threshold']
         start_angle = rules['fsm_rules']['start_threshold']
         
+        # --- NEW: DTW EVALUATION ---
+        df_full = pd.read_csv(output_csv_path)
+        data_log_full = df_full.to_dict('records')
+        dtw_score, graph_data = build_multi_rep_dtw(
+            data_log_full, all_reps_data, rules, rules.get('template_csv')
+        )
+        
+        rep_consistency = "N/A"
         # Gamification: Calculate score out of 10
         degrees_off = abs(lowest_angle - target_angle)
         penalty = degrees_off / 5
@@ -284,12 +302,10 @@ async def analyze_video(
                     rep_end_ms = rep_data[-1]['timestamp_ms']
                     total_time_ms += (rep_end_ms - rep_start_ms)
             avg_rep_time = round((total_time_ms / len(all_reps_data)) / 1000.0, 1)
-
-        # Stat C: Rep Consistency
+            
         trigger_key = rules['fsm_rules']['primary_trigger']
         angle_key = f"{trigger_key}_angle"
         
-        rep_consistency = "N/A"
         if len(all_reps_data) >= 2:
             try:
                 first_rep_lowest = min([f.get(angle_key, 0) for f in all_reps_data[0] if angle_key in f])
@@ -311,14 +327,15 @@ async def analyze_video(
             target_angle=target_angle,
             score=score_rounded,
             tempo=avg_rep_time,
-            consistency=rep_consistency
+            consistency=rep_consistency,
+            dtw_score=round(dtw_score, 1) if type(dtw_score) == float else dtw_score
         )
         
         if tool_action:
             session_overrides[exercise_name] = tool_action["new_target_angle"]
 
         # Save persistent stats for uploaded videos too
-        save_stats(reps_completed, score_rounded)
+        save_stats(rules["name"], reps_completed, score_rounded)
 
         # 4. Clean up the temp video
         if os.path.exists(temp_video_path):
@@ -336,7 +353,9 @@ async def analyze_video(
             "consistency": rep_consistency,
             "coach_feedback": feedback,
             "skeleton_data": skeleton_data,
-            "fps": fps
+            "fps": fps,
+            "graph_data": graph_data,
+            "target_angle": target_angle
         }
 
     except Exception as e:

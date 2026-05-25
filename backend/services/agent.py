@@ -15,7 +15,7 @@ import re
 
 WORKOUT_MEMORY = []
 
-def generate_coach_feedback(exercise_name, reps_completed, lowest_angle, target_angle, score, tempo=None, consistency=None):
+def generate_coach_feedback(exercise_name, reps_completed, lowest_angle, target_angle, score, tempo=None, consistency=None, dtw_score=None):
     """
     Sends the user's biomechanical FSM data to Groq (Llama 3) for real-time feedback.
     Features Autonomous Analysis, Memory, and Tool Use.
@@ -27,7 +27,8 @@ def generate_coach_feedback(exercise_name, reps_completed, lowest_angle, target_
     RULE 1: NEVER mention specific numbers, degrees, or angles in your response. 
     RULE 2: Keep it to 2 punchy, highly motivating sentences. Speak directly to the user (e.g., 'Bro', 'Man').
     RULE 3: Analyze the provided math data autonomously. If their score is low, tell them exactly what physical cue to change.
-    RULE 4: If the user scores below 5/10 for TWO CONSECUTIVE SETS on the same exercise, YOU MUST call the 'adjust_exercise_difficulty' tool to make the target angle easier (add or subtract 10-15 degrees to make it require less flexibility)."""
+    RULE 4: If the user scores below 5/10 for TWO CONSECUTIVE SETS on the same exercise, YOU MUST call the 'adjust_exercise_difficulty' tool to make the target angle easier (add or subtract 10-15 degrees to make it require less flexibility).
+    RULE 5: If a DTW Cadence Error is provided and is greater than 15, their tempo/cadence is out of sync with a mathematically perfect rep! Instruct them to fix their pacing."""
 
     # Format memory for context
     memory_context = "No previous sets in this session."
@@ -44,6 +45,7 @@ def generate_coach_feedback(exercise_name, reps_completed, lowest_angle, target_
     - Reps: {reps_completed}
     - Tempo: {tempo}s
     - Consistency: {consistency}
+    - DTW Cadence Error: {dtw_score}
     
     Past Workout Memory:
     {memory_context}
