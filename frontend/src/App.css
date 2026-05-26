@@ -19,7 +19,7 @@ header {
 h1 {
   font-size: 3rem;
   color: #ff4a4a;
-  margin-bottom: 0.5rem;
+  margin-bottom: 1.2rem;
 }
 
 .upload-card, .results-card {
@@ -178,4 +178,33 @@ select, input[type="file"] {
     transform: translate(-50%, -50%) scale(1);
     box-shadow: 0 0 20px rgba(255, 0, 255, 0.4);
   }
+}
+
+@keyframes popIn {
+  from {
+    transform: scale(0.85);
+    opacity: 0;
+  }
+  to {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
+
+.pop-in-animation {
+  animation: popIn 0.45s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
+}
+
+@keyframes beat {
+  0%, 100% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.08);
+  }
+}
+
+.beat-animation {
+  display: inline-block;
+  animation: beat 1.2s infinite ease-in-out;
 }
