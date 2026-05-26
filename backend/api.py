@@ -224,6 +224,93 @@ async def websocket_endpoint(websocket: WebSocket):
         print("WebSocket disconnected. User finished the set or closed the camera.")
 
 
+@app.websocket("/ws/haruhi")
+async def websocket_haruhi_endpoint(websocket: WebSocket):
+    await websocket.accept()
+    tracker = None
+    rules = exercises_db.get("haruhi")
+    
+    if rules:
+        from services.haruhi import DanceTracker
+        tracker = DanceTracker(rules)
+    else:
+        await websocket.close()
+        return
+
+    try:
+        while True:
+            data = await websocket.receive_json()
+            
+            if "command" in data and data["command"] == "stop":
+                final_score_to_send = 0.0
+                if tracker and tracker.data_log:
+                    import pandas as pd
+                    from services.analyzer import evaluate_rep_df
+                    from scipy.signal import savgol_filter
+                    
+                    df = pd.DataFrame(tracker.data_log)
+                    template_csv = rules.get('template_csv')
+                    df_template = None
+                    if template_csv and os.path.exists(template_csv):
+                        df_template = pd.read_csv(template_csv)
+                        
+                    dtw_scores = []
+                    
+                    if df_template is not None and len(df) >= 3:
+                        for hinge_name in rules['hinges'].keys():
+                            col_name = f"{hinge_name}_angle"
+                            if col_name in df.columns:
+                                try:
+                                    window = min(15, len(df))
+                                    if window > 3 and window % 2 == 0: window -= 1
+                                    if window > 3:
+                                        df[col_name + "_smooth"] = savgol_filter(df[col_name], window_length=window, polyorder=2)
+                                    else:
+                                        df[col_name + "_smooth"] = df[col_name]
+                                except:
+                                    df[col_name + "_smooth"] = df[col_name]
+                        
+                        rep_score, _ = evaluate_rep_df(df, df_template, rules, generate_graph=False)
+                        if rep_score > 0:
+                            dtw_scores.append(rep_score)
+                            
+                    final_score = 0
+                    if dtw_scores:
+                        final_score = sum(dtw_scores) / len(dtw_scores)
+                        
+                    # Calculate a final score out of 100
+                    accuracy_percentage = max(0, min(100, 100 - (final_score * 4)))
+                    final_score_to_send = round(accuracy_percentage, 1)
+                
+                await websocket.send_json({
+                    "type": "summary",
+                    "score": final_score_to_send
+                })
+                break
+                
+            if "command" in data and data["command"] == "start_recording":
+                if tracker:
+                    tracker.is_recording = True
+                continue
+                
+            frame_b64 = data.get("frame")
+            timestamp_ms = data.get("timestamp_ms", 0)
+            
+            if frame_b64 and tracker:
+                skeleton_coords, current_state = tracker.process_frame(frame_b64, timestamp_ms)
+                
+                await websocket.send_json({
+                    "type": "update",
+                    "skeleton": skeleton_coords,
+                    "state": current_state
+                })
+                
+    except WebSocketDisconnect:
+        pass
+    except Exception as e:
+        print(f"WS Haruhi Error: {e}")
+
+
 @app.get("/stats")
 def get_stats():
     return load_stats()

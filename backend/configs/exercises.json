@@ -140,5 +140,47 @@
       "start_threshold": 160,
       "target_threshold": 90
     }
+  },
+  "haruhi": {
+    "name": "Hare Hare Yukai (Haruhi Dance)",
+    "hinges": {
+      "right_shoulder": [
+        "right_hip",
+        "right_shoulder",
+        "right_elbow"
+      ],
+      "left_shoulder": [
+        "left_hip",
+        "left_shoulder",
+        "left_elbow"
+      ],
+      "right_elbow": [
+        "right_shoulder",
+        "right_elbow",
+        "right_wrist"
+      ],
+      "left_elbow": [
+        "left_shoulder",
+        "left_elbow",
+        "left_wrist"
+      ],
+      "right_knee": [
+        "right_hip",
+        "right_knee",
+        "right_ankle"
+      ],
+      "left_knee": [
+        "left_hip",
+        "left_knee",
+        "left_ankle"
+      ]
+    },
+    "template_video": "data/templates/perfect_haruhi.mp4",
+    "template_csv": "data/templates/perfect_haruhi_angles.csv",
+    "fsm_rules": {
+      "primary_trigger": "right_shoulder",
+      "start_threshold": 0,
+      "target_threshold": 0
+    }
   }
 }

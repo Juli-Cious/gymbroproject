@@ -160,3 +160,22 @@ select, input[type="file"] {
     flex-direction: column;
   }
 }
+
+.pulse-animation {
+  animation: pulse-glowing 2s infinite ease-in-out;
+}
+
+@keyframes pulse-glowing {
+  0% {
+    transform: translate(-50%, -50%) scale(1);
+    box-shadow: 0 0 20px rgba(255, 0, 255, 0.4);
+  }
+  50% {
+    transform: translate(-50%, -50%) scale(1.05);
+    box-shadow: 0 0 35px rgba(255, 0, 255, 0.7);
+  }
+  100% {
+    transform: translate(-50%, -50%) scale(1);
+    box-shadow: 0 0 20px rgba(255, 0, 255, 0.4);
+  }
+}

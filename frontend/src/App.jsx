@@ -1,11 +1,12 @@
 import { useState, useRef, useEffect } from 'react'
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, ReferenceLine } from 'recharts'
+import HaruhiDance from './HaruhiDance';
 import './App.css'
 
 function App() {
   const [exercise, setExercise] = useState('squat')
   const [videoUrl, setVideoUrl] = useState(null)
-  
+
   const [showSkeleton, setShowSkeleton] = useState(true)
   const showSkeletonRef = useRef(true)
 
@@ -18,7 +19,8 @@ function App() {
   const [reps, setReps] = useState(0)
   const [isLive, setIsLive] = useState(false)
   const [isWebcamActive, setIsWebcamActive] = useState(false)
-  
+
+  const [showHaruhi, setShowHaruhi] = useState(false);
   const [summaryData, setSummaryData] = useState(null)
   const [isGeneratingReport, setIsGeneratingReport] = useState(false)
   const [userStats, setUserStats] = useState({ workouts: 0, total_reps: 0, average_score: 0.0, calories: 0.0 })
@@ -34,7 +36,7 @@ function App() {
   }
 
   const clearStats = async () => {
-    if(!window.confirm("Are you sure you want to wipe your persistent workout data?")) return;
+    if (!window.confirm("Are you sure you want to wipe your persistent workout data?")) return;
     try {
       await fetch('http://localhost:8000/clear_stats', { method: 'POST' })
       fetchStats()
@@ -68,7 +70,7 @@ function App() {
   const startWebcam = async (e) => {
     e.preventDefault()
     try {
-      const stream = await navigator.mediaDevices.getUserMedia({ video: true })
+      const stream = await navigator.mediaDevices.getUserMedia({ video: { width: 1280, height: 720 } })
       streamRef.current = stream
       setIsWebcamActive(true)
       setVideoUrl(null)
@@ -126,14 +128,14 @@ function App() {
 
     // Open WebSocket
     wsRef.current = new WebSocket('ws://localhost:8000/ws/track')
-    
+
     wsRef.current.onopen = () => {
       wsRef.current.send(JSON.stringify({ setup: true, exercise }))
     }
 
     wsRef.current.onmessage = (event) => {
       const data = JSON.parse(event.data)
-      
+
       if (data.status === "ready") {
         if (videoRef.current && !streamRef.current) {
           videoRef.current.play()
@@ -147,7 +149,7 @@ function App() {
         setCurrentState(prev => prev !== data.state ? data.state : prev)
         setReps(prev => prev !== data.rep_count ? data.rep_count : prev)
         drawSkeleton(data.coordinates)
-        
+
         // PING PONG: Send next frame only after backend finished the last one!
         animationFrameRef.current = requestAnimationFrame(processFrame)
       }
@@ -156,10 +158,10 @@ function App() {
 
   const processFrame = () => {
     if (!wsRef.current || wsRef.current.readyState !== WebSocket.OPEN) return;
-    
+
     const video = videoRef.current;
     const hiddenCanvas = hiddenCanvasRef.current;
-    
+
     // Check if video is ready to be drawn
     if (!video || !hiddenCanvas || video.videoWidth === 0) {
       animationFrameRef.current = requestAnimationFrame(processFrame);
@@ -167,8 +169,8 @@ function App() {
     }
 
     if (video.paused && !streamRef.current) {
-       animationFrameRef.current = requestAnimationFrame(processFrame);
-       return;
+      animationFrameRef.current = requestAnimationFrame(processFrame);
+      return;
     }
 
     // Aggressive Canvas Compression: Resize to a smaller footprint
@@ -184,10 +186,10 @@ function App() {
 
     const ctx = hiddenCanvas.getContext('2d');
     ctx.drawImage(video, 0, 0, targetWidth, targetHeight);
-    
+
     // Compress heavily for WebSocket speed
     const frameBase64 = hiddenCanvas.toDataURL('image/jpeg', 0.5);
-    
+
     const timestamp_ms = streamRef.current ? Date.now() : Math.floor(video.currentTime * 1000);
 
     wsRef.current.send(JSON.stringify({
@@ -200,7 +202,7 @@ function App() {
     const video = videoRef.current;
     const canvas = overlayCanvasRef.current;
     if (!canvas || !video) return;
-    
+
     const ctx = canvas.getContext('2d');
 
     if (canvas.width !== video.clientWidth || canvas.height !== video.clientHeight) {
@@ -230,6 +232,10 @@ function App() {
         }
       });
     }
+  }
+
+  if (showHaruhi) {
+    return <HaruhiDance onBack={() => setShowHaruhi(false)} activeStream={streamRef.current} />;
   }
 
   return (
@@ -275,31 +281,56 @@ function App() {
             </div>
 
             <form className="upload-card">
-            <div className="input-group">
-              <label>Select Exercise:</label>
-              <select value={exercise} onChange={(e) => setExercise(e.target.value)}>
-                <option value="squat">Bodyweight Squat</option>
-                <option value="push_up">Standard Push-Up</option>
-                <option value="bicep_curl">Bicep Curl</option>
-                <option value="sit_up">Sit-Up</option>
-                <option value="deadlift">Barbell Deadlift</option>
-              </select>
-            </div>
-
-            <div className="input-group">
-              <label>Input Source:</label>
-              <div style={{ display: 'flex', gap: '10px' }}>
-                <button onClick={startWebcam} className="submit-btn" style={{flex: 1, backgroundColor: isWebcamActive ? '#444' : '#007BFF'}}>
-                  {isWebcamActive ? "Webcam Active" : "Use Webcam"}
-                </button>
-                <input type="file" accept="video/mp4,video/quicktime" onChange={handleFileChange} style={{flex: 1}}/>
+              <div className="input-group">
+                <label>Select Exercise:</label>
+                <select value={exercise} onChange={(e) => setExercise(e.target.value)}>
+                  <option value="squat">Bodyweight Squat</option>
+                  <option value="push_up">Standard Push-Up</option>
+                  <option value="bicep_curl">Bicep Curl</option>
+                  <option value="sit_up">Sit-Up</option>
+                  <option value="deadlift">Barbell Deadlift</option>
+                </select>
               </div>
-            </div>
 
-            <button onClick={startTracking} disabled={!videoUrl && !isWebcamActive} className="submit-btn">
-              Start Live Tracking
-            </button>
-          </form>
+              <div className="input-group">
+                <label>Input Source:</label>
+                <div style={{ display: 'flex', gap: '10px' }}>
+                  <button onClick={startWebcam} className="submit-btn" style={{ flex: 1, backgroundColor: isWebcamActive ? '#444' : '#007BFF' }}>
+                    {isWebcamActive ? "Webcam Active" : "Use Webcam"}
+                  </button>
+                  <input type="file" accept="video/mp4,video/quicktime" onChange={handleFileChange} style={{ flex: 1 }} />
+                </div>
+              </div>
+
+              <button onClick={startTracking} disabled={!videoUrl && !isWebcamActive} className="submit-btn">
+                Start Live Tracking
+              </button>
+              <div style={{ marginTop: '20px', textAlign: 'center' }}>
+                <button
+                  type="button"
+                  disabled={!isWebcamActive}
+                  onClick={() => setShowHaruhi(true)}
+                  className="submit-btn"
+                  style={{
+                    backgroundColor: isWebcamActive ? '#2a112a' : '#1a1a1a',
+                    border: isWebcamActive ? '1px solid #ff00ff' : '1px solid #333',
+                    color: isWebcamActive ? '#ff00ff' : '#555',
+                    fontSize: '0.9rem',
+                    width: 'auto',
+                    cursor: isWebcamActive ? 'pointer' : 'not-allowed',
+                    opacity: isWebcamActive ? 1 : 0.6,
+                    transition: 'all 0.3s ease'
+                  }}
+                >
+                  🌸 Haruhi (Dangerous)
+                </button>
+                {!isWebcamActive && (
+                  <p style={{ color: '#888', fontSize: '0.8rem', marginTop: '8px' }}>
+                    * Activate your webcam *
+                  </p>
+                )}
+              </div>
+            </form>
           </>
         )}
 
@@ -357,8 +388,8 @@ function App() {
                     textAlign: 'center',
                     zIndex: 20
                   }}>
-                    ⚠️ ALIGNING CAMERA<br/>
-                    <span style={{fontSize: '1rem'}}>Step back! Ensure your full body is in the frame.</span>
+                    ⚠️ ALIGNING CAMERA<br />
+                    <span style={{ fontSize: '1rem' }}>Step back! Ensure your full body is in the frame.</span>
                   </div>
                 )}
               </div>
@@ -379,7 +410,7 @@ function App() {
                 <div className="stats-grid">
                   <div className="stat-box" style={{ gridColumn: 'span 2' }}>
                     <span className="stat-label">Live Rep Counter</span>
-                    <span className="stat-value highlight-score" style={{fontSize: '3.5rem'}}>{reps}</span>
+                    <span className="stat-value highlight-score" style={{ fontSize: '3.5rem' }}>{reps}</span>
                   </div>
                 </div>
 
@@ -387,8 +418,8 @@ function App() {
                   <h3>🦾 Coach Hercules Says:</h3>
                   <p>
                     {currentState === "ALIGNING" ? "I can't see you properly. Step back and show your full body." :
-                    (currentState === "Resting" ? "Ready when you are. Get in position." : 
-                    (currentState === "ACTIVE" ? "⚠️ HOLD AND GO LOWER!" : "🔥 FORM LOOKS GOOD!"))}
+                      (currentState === "Resting" ? "Ready when you are. Get in position." :
+                        (currentState === "ACTIVE" ? "⚠️ HOLD AND GO LOWER!" : "🔥 FORM LOOKS GOOD!"))}
                   </p>
                 </div>
               </div>
@@ -399,7 +430,7 @@ function App() {
         {summaryData && !isLive && (
           <div className="results-card" style={{ maxWidth: '800px', margin: '0 auto', textAlign: 'left' }}>
             <h2>Post-Workout Analysis</h2>
-            
+
             <div className="stats-grid" style={{ marginBottom: '20px' }}>
               <div className="stat-box">
                 <span className="stat-label">Score</span>
@@ -444,7 +475,7 @@ function App() {
             </button>
           </div>
         )}
-        
+
         {/* Invisible canvas for capturing base64 frames to send to Python */}
         <canvas ref={hiddenCanvasRef} style={{ display: 'none' }} />
       </main>
