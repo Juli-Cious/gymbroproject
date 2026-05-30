@@ -5,10 +5,21 @@ from dotenv import load_dotenv
 # Load the environment variables from the .env file automatically
 load_dotenv()
 
-# The system reads the API key from your computer's environment variables (SAFE!)
-client = Groq(
-    api_key=os.environ.get("GROQ_API_KEY"),
-)
+# Initialize client lazily to prevent server from crashing if API key is missing on startup
+client = None
+
+def get_groq_client():
+    global client
+    if client is not None:
+        return client
+    
+    api_key = os.environ.get("GROQ_API_KEY")
+    if not api_key:
+        # Check if it was loaded but empty
+        raise ValueError("GROQ_API_KEY environment variable is not set. Please add it to your backend/.env file.")
+    
+    client = Groq(api_key=api_key)
+    return client
 
 import json
 import re
@@ -81,7 +92,12 @@ def generate_coach_feedback(exercise_name, reps_completed, lowest_angle, target_
     tool_action = None
 
     try:
-        chat_completion = client.chat.completions.create(
+        groq_client = get_groq_client()
+    except ValueError as e:
+        return f"Error contacting Hercules AI Brain: {e}", None
+
+    try:
+        chat_completion = groq_client.chat.completions.create(
             messages=messages,
             model="llama-3.3-70b-versatile",
             temperature=0.7,
@@ -106,7 +122,7 @@ def generate_coach_feedback(exercise_name, reps_completed, lowest_angle, target_
                 "content": json.dumps({"status": "success", "message": "Target angle updated in session memory."})
             })
             
-            final_completion = client.chat.completions.create(
+            final_completion = groq_client.chat.completions.create(
                 messages=messages,
                 model="llama-3.3-70b-versatile",
                 temperature=0.7,

@@ -20,8 +20,25 @@ Hercules AI is a full-stack, AI-powered gym application that uses computer visio
 - Node.js & npm (for the frontend)
 - Python 3.9+ (for the backend)
 - Conda (optional, but recommended for managing Python environments)
+- **Docker Desktop** (optional, but required for containerized deployment)
 
-## Setting up the Backend
+## Production Deployment (Docker - Recommended)
+The easiest way to run the entire stack (Frontend + Backend) is using Docker.
+
+1. Ensure **Docker Desktop** is running.
+2. Create a `.env` file inside the `backend/` directory and add your Groq API key:
+   ```env
+   GROQ_API_KEY="your_groq_api_key_here"
+   ```
+3. Open a terminal in the root project directory and run:
+   ```bash
+   docker compose up --build
+   ```
+4. Access the application:
+   - Frontend: [http://localhost:5173](http://localhost:5173)
+   - Backend API: [http://localhost:8000](http://localhost:8000)
+
+## Setting up the Backend (Local Development)
 
 > **Windows Users Note:** If you haven't added Conda to your system PATH, do not use the standard VSCode PowerShell or CMD terminal. You must open the **Anaconda Prompt** (or Miniconda Prompt) from your Windows Start Menu to run the backend commands.
 
