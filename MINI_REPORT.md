@@ -48,8 +48,15 @@ The entire application (FastAPI backend + React/Vite frontend) is fully containe
 The final biomechanical metrics (DTW score, Classification Accuracy, Rep Consistency, Tempo) are ingested by an **Agentic AI Coach** powered by Groq's Llama 3 models. The LLM interprets the mathematical arrays and provides personalized, contextual, conversational feedback on the user's performance, effectively acting as an automated biomechanical expert.
 
 - **Backend Resiliency**: The agent architecture implements lazy-loading and graceful error handling. If the external LLM API is unavailable (e.g., missing API keys or network failure), the server degrades gracefully—continuing to deliver real-time computer vision and XAI forensics without crashing the tracking loop.
+- **Autonomous Tool Use (Dynamic Difficulty Scaling)**: To support adaptive coaching, the AI coach has autonomous tool-use capabilities. If the user's computed form score falls below `5/10` for two consecutive sets on the same exercise, the LLM autonomously invokes the `adjust_exercise_difficulty` tool. This dynamically modifies the FSM's target range of motion (ROM) threshold (e.g. from `100°` to `115°`) to make the goal more achievable.
 
-## 7. Architectural Deviations & Justifications
+## 7. Persistent Gamification & History Timeline
+
+To track physical progression over time, the application incorporates a local tracking database.
+- **Local Data Persistence**: Summaries of completed sets (including date, exercise name, reps completed, form score, and calories burned) are saved to a structured JSON file (`backend/data/user_stats.json`).
+- **Interactive Lifetime Dashboard**: The React homepage displays an interactive lifetime dashboard that aggregates overall stats (average score, total reps, total workouts, calories) and displays a scrollable, color-coded timeline feed of past workouts.
+
+## 8. Architectural Deviations & Justifications
 
 In alignment with the curriculum's flexible guidelines, we opted for two superior architectural alternatives to maximize real-time performance:
 1. **Groq Llama 3 vs. Ollama**: WebSockets require ultra-low latency inference to maintain the illusion of a live conversational coach. We elected to use Groq's Llama 3 cloud inference over a local Ollama instance, as Groq's specialized LPU architecture provides near-instantaneous token generation that a local machine cannot match.
