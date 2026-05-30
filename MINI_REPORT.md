@@ -48,3 +48,9 @@ The entire application (FastAPI backend + React/Vite frontend) is fully containe
 The final biomechanical metrics (DTW score, Classification Accuracy, Rep Consistency, Tempo) are ingested by an **Agentic AI Coach** powered by Groq's Llama 3 models. The LLM interprets the mathematical arrays and provides personalized, contextual, conversational feedback on the user's performance, effectively acting as an automated biomechanical expert.
 
 - **Backend Resiliency**: The agent architecture implements lazy-loading and graceful error handling. If the external LLM API is unavailable (e.g., missing API keys or network failure), the server degrades gracefully—continuing to deliver real-time computer vision and XAI forensics without crashing the tracking loop.
+
+## 7. Architectural Deviations & Justifications
+
+In alignment with the curriculum's flexible guidelines, we opted for two superior architectural alternatives to maximize real-time performance:
+1. **Groq Llama 3 vs. Ollama**: WebSockets require ultra-low latency inference to maintain the illusion of a live conversational coach. We elected to use Groq's Llama 3 cloud inference over a local Ollama instance, as Groq's specialized LPU architecture provides near-instantaneous token generation that a local machine cannot match.
+2. **Algorithmic Kinematics vs. Kinetics-700 Datasets**: Rather than training a heavy, opaque Deep Learning action-recognition model on the Kinetics-700 dataset, we adopted a purely mathematical approach. By combining trigonometric coordinate extraction with Fast Dynamic Time Warping (DTW) mapped against manually curated CSV reference clips, we achieved a transparent, zero-shot assessment engine that mathematically justifies its classifications without the massive compute overhead of a CNN.
