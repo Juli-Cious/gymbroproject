@@ -16,11 +16,15 @@ __pycache__/
 .idea/
 
 # Data and Models
-# (We ignore heavy videos and temp processing files, but you might want to keep the models if they are small)
-data/testing_videos/
-*.mp4
+# (We ignore heavy models and temp processing files, but track templates and testing videos)
 temp_*
-*.csv
+
+# Allow specific templates and testing data
+!data/templates/*.csv
+!data/templates/*.mp4
+!data/testing_videos/
+!data/testing_videos/*.mp4
+!data/*.csv
 
 # OS
 .DS_Store

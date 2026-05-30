@@ -15,3 +15,10 @@ build/
 *.webm
 *.log
 static/temp_*
+
+# Allow specific data templates and videos in backend
+!backend/data/templates/*.csv
+!backend/data/templates/*.mp4
+!backend/data/testing_videos/
+!backend/data/testing_videos/*.mp4
+!backend/data/*.csv
