@@ -46,3 +46,5 @@ The entire application (FastAPI backend + React/Vite frontend) is fully containe
 ## 6. Agentic Biomechanical Coach
 
 The final biomechanical metrics (DTW score, Classification Accuracy, Rep Consistency, Tempo) are ingested by an **Agentic AI Coach** powered by Groq's Llama 3 models. The LLM interprets the mathematical arrays and provides personalized, contextual, conversational feedback on the user's performance, effectively acting as an automated biomechanical expert.
+
+- **Backend Resiliency**: The agent architecture implements lazy-loading and graceful error handling. If the external LLM API is unavailable (e.g., missing API keys or network failure), the server degrades gracefully—continuing to deliver real-time computer vision and XAI forensics without crashing the tracking loop.
