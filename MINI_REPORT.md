@@ -61,3 +61,47 @@ To track physical progression over time, the application incorporates a local tr
 In alignment with the curriculum's flexible guidelines, we opted for two superior architectural alternatives to maximize real-time performance:
 1. **Groq Llama 3 vs. Ollama**: WebSockets require ultra-low latency inference to maintain the illusion of a live conversational coach. We elected to use Groq's Llama 3 cloud inference over a local Ollama instance, as Groq's specialized LPU architecture provides near-instantaneous token generation that a local machine cannot match.
 2. **Algorithmic Kinematics vs. Kinetics-700 Datasets**: Rather than training a heavy, opaque Deep Learning action-recognition model on the Kinetics-700 dataset, we adopted a purely mathematical approach. By combining trigonometric coordinate extraction with Fast Dynamic Time Warping (DTW) mapped against manually curated CSV reference clips, we achieved a transparent, zero-shot assessment engine that mathematically justifies its classifications without the massive compute overhead of a CNN.
+
+## 9. Bonus Feature — Haruhi Dance Synchronization Mode 🌸
+
+Beyond structured resistance training, the system includes an extended application of the same biomechanical pipeline: a **full-body dance synchronization evaluator** themed around the *Hare Hare Yukai* choreography from *The Melancholy of Haruhi Suzumiya*.
+
+### Concept
+
+The core insight is that **dance is a motor control problem**. Evaluating whether a user's joint angle trajectories match a reference performance over time is mathematically identical to evaluating exercise form against a golden standard. This feature reuses the entire kinematics and DTW infrastructure with no modifications to the core math.
+
+### Phase State Machine
+
+The Haruhi mode implements a **5-phase finite state machine** governing the user experience:
+
+| Phase | Trigger | Description |
+|---|---|---|
+| `ALIGNING` | On entry | Webcam feed is live; user must step into full-body frame |
+| `POSITIONED` | Backend confirms all landmarks visible | Green overlay confirmation; 1.5s hold required |
+| `COUNTDOWN` | `POSITIONED` held for 1.5s | 5-second on-screen countdown before dance begins |
+| `DANCING` | Countdown reaches 0 | Anime reference video plays; frame capture & scoring begins |
+| `FINISHED` | Video ends or user aborts | DTW score computed; results screen shown |
+
+The backend's `DanceTracker` (`services/haruhi.py`) evaluates each frame by checking whether all configured hinge landmarks fall within the visible coordinate range `[0.01, 0.99]`. If any landmark exits the frame, the state reverts to `ALIGNING`, enforcing continuous full-body presence throughout the dance.
+
+### Scoring & Grading
+
+Upon completion, the accumulated per-frame angle data is evaluated against the curated `perfect_haruhi_angles.csv` template using **Fast DTW**, producing a time-normalized similarity cost. This cost is converted to a 0–100 synchronization accuracy percentage and mapped to a rhythm-game-style grade scale:
+
+| Grade | Threshold | Description |
+|---|---|---|
+| SS | ≥ 95% | PERFECT PERFECT PERFECT! |
+| S | ≥ 90% | Marvelous Performance! |
+| A | ≥ 80% | Great job, Keep it up! |
+| B | ≥ 70% | Good effort, you got this! |
+| C | ≥ 60% | Decent, but needs practice. |
+| D | ≥ 50% | Getting there, work on timing! |
+| F | < 50% | Practice makes perfect! |
+
+### Frontend Architecture
+
+The `HaruhiDance` React component (`frontend/src/HaruhiDance.jsx`) manages the full session lifecycle:
+- **WebSocket stream**: Sends compressed JPEG frames (640px max-width, 50% quality) to `ws://localhost:8000/ws/haruhi` in a ping-pong loop — the next frame is only dispatched after the backend acknowledges the previous one, preventing queue buildup.
+- **Dual-layout rendering**: The UI dynamically switches between a large single-column alignment view (phases `ALIGNING`/`POSITIONED`) and a side-by-side dual-panel view (anime video + webcam feed) once dancing begins.
+- **Effect isolation**: Camera acquisition and WebSocket setup are deliberately separated into two `useEffect` hooks to prevent a re-initialization loop — setting `localStream` state would otherwise re-trigger the main effect, resetting `dancePhase` to `ALIGNING` mid-dance and preventing the anime video from ever appearing.
+- **Results overlay**: A full-screen animated results card with confetti canvas animation and a cheering audio fade-in/fade-out is rendered on completion.
