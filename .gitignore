@@ -22,3 +22,6 @@ static/temp_*
 !backend/data/testing_videos/
 !backend/data/testing_videos/*.mp4
 !backend/data/*.csv
+
+# Allow the specific Haruhi dance video asset
+!frontend/public/haruhi_dance.webm
