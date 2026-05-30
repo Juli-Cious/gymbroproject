@@ -150,7 +150,7 @@ async def websocket_endpoint(websocket: WebSocket):
                             pass
 
                     # --- LIVE DTW EVALUATION ---
-                    dtw_score, graph_data = build_multi_rep_dtw(
+                    dtw_score, graph_data, final_xai = build_multi_rep_dtw(
                         tracker.data_log, tracker.all_reps_data, rules, rules.get('template_csv')
                     )
 
@@ -182,7 +182,8 @@ async def websocket_endpoint(websocket: WebSocket):
                             "consistency": rep_consistency,
                             "coach_feedback": feedback,
                             "graph_data": graph_data,
-                            "target_angle": target_angle
+                            "target_angle": target_angle,
+                            "xai_metrics": final_xai
                         }
                     })
                 break

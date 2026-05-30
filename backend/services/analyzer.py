@@ -114,6 +114,8 @@ def evaluate_rep_df(df_user, df_template, rules, generate_graph=True, threshold=
 
 def build_multi_rep_dtw(data_log_full, all_reps_data, rules, template_csv):
     from scipy.signal import savgol_filter
+    from scipy.stats import pearsonr
+    import numpy as np
     import os
     
     df_template = None
@@ -125,6 +127,13 @@ def build_multi_rep_dtw(data_log_full, all_reps_data, rules, template_csv):
     
     dtw_scores = []
     graph_data = []
+    
+    xai_stats = {
+        "rmses": [],
+        "cosines": [],
+        "pearsons": [],
+        "deviations": []
+    }
     
     if data_log_full:
         start_time = data_log_full[0].get("timestamp_ms", 0)
@@ -170,6 +179,48 @@ def build_multi_rep_dtw(data_log_full, all_reps_data, rules, template_csv):
                     if aligned_template[u_idx] is None:
                         aligned_template[u_idx] = template_angles[t_idx]
                 
+                # --- XAI Metrics Calculation ---
+                valid_u = []
+                valid_t = []
+                for i, (u_val, t_val) in enumerate(zip(user_angles, aligned_template)):
+                    if t_val is not None:
+                        valid_u.append(u_val)
+                        valid_t.append(t_val)
+                
+                if len(valid_u) > 1:
+                    vu = np.array(valid_u)
+                    vt = np.array(valid_t)
+                    
+                    # RMSE
+                    rmse = np.sqrt(np.mean((vu - vt)**2))
+                    xai_stats["rmses"].append(rmse)
+                    
+                    # Cosine Similarity
+                    dot = np.dot(vu, vt)
+                    norm_u = np.linalg.norm(vu)
+                    norm_t = np.linalg.norm(vt)
+                    if norm_u > 0 and norm_t > 0:
+                        cos_sim = dot / (norm_u * norm_t)
+                        xai_stats["cosines"].append(cos_sim)
+                        
+                    # Pearson Correlation
+                    # Avoid constant arrays which throw warnings/errors
+                    if np.std(vu) > 1e-5 and np.std(vt) > 1e-5:
+                        r, _ = pearsonr(vu, vt)
+                        xai_stats["pearsons"].append(r)
+                        
+                    # Form Deviation Classification Heuristics
+                    min_u = np.min(vu)
+                    min_t = np.min(vt)
+                    
+                    if min_u > min_t + 15:
+                        xai_stats["deviations"].append("Shallow Depth / Incomplete ROM")
+                    elif min_u < min_t - 15:
+                        xai_stats["deviations"].append("Excessive ROM / Over-extension")
+                    else:
+                        xai_stats["deviations"].append("Perfect Form")
+                # -------------------------------
+                
                 for i, u_angle in enumerate(user_angles):
                     frame_ts = df_rep.iloc[i]['timestamp_ms']
                     for p in graph_data:
@@ -186,4 +237,21 @@ def build_multi_rep_dtw(data_log_full, all_reps_data, rules, template_csv):
     if dtw_scores:
         final_score = sum(dtw_scores) / len(dtw_scores)
         
-    return final_score, graph_data
+    # Aggregate XAI metrics for final report
+    import collections
+    dev_counts = collections.Counter(xai_stats["deviations"])
+    total_reps_measured = len(xai_stats["deviations"])
+    
+    accuracy = 0.0
+    if total_reps_measured > 0:
+        accuracy = (dev_counts.get("Perfect Form", 0) / total_reps_measured) * 100
+        
+    final_xai = {
+        "rmse": round(np.mean(xai_stats["rmses"]), 2) if xai_stats["rmses"] else 0.0,
+        "cosine_similarity": round(np.mean(xai_stats["cosines"]), 3) if xai_stats["cosines"] else 0.0,
+        "pearson_r": round(np.mean(xai_stats["pearsons"]), 3) if xai_stats["pearsons"] else 0.0,
+        "classification_accuracy": round(accuracy, 1),
+        "deviation_breakdown": dict(dev_counts)
+    }
+        
+    return final_score, graph_data, final_xai

@@ -10,6 +10,7 @@ Hercules AI is a full-stack, AI-powered gym application that uses computer visio
 - **Real-Time Kinematic Tracking**: Uses MediaPipe to track 3D joint angles live from your webcam.
 - **Camera Alignment Gatekeeper**: Enforces coordinate boundary checking to ensure your required joints are fully visible inside the frame before tracking begins.
 - **Dynamic Time Warping (DTW) Coaching**: Evaluates your tempo and cadence against a Golden Standard perfect rep, intelligently stretching the perfect rep's timeline to map against every single rep you complete.
+- **XAI & Forensics Report**: Provides mathematical justifications (RMSE, Cosine Similarity, Pearson correlation) and heuristic Form Deviation Classification (e.g., Shallow Depth, Over-extension) on a Post-Workout dashboard to ensure absolute transparency in AI scoring.
 - **Social Timeline Dashboard**: A sleek, vertically scrollable feed that logs all of your workouts with color-coded AI scoring. Data safely persists across sessions via a local database.
 - **Agentic AI Coach**: Powered by Groq's Llama 3 models.
   - *Autonomous Analysis*: The AI autonomously interprets your mathematical joint data rather than relying on hardcoded rules.

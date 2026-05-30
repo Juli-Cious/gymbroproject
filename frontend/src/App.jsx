@@ -455,7 +455,7 @@ function App() {
               <p>{summaryData.coach_feedback}</p>
             </div>
 
-            <div className="chart-container" style={{ height: '300px', backgroundColor: '#1e1e1e', padding: '20px', borderRadius: '12px' }}>
+            <div className="chart-container" style={{ height: '300px', backgroundColor: '#1e1e1e', padding: '20px', borderRadius: '12px', marginBottom: '20px' }}>
               <h3 style={{ marginBottom: '15px', color: '#fff', fontSize: '1rem' }}>Movement Angle vs Golden Standard</h3>
               <ResponsiveContainer width="100%" height="100%">
                 <LineChart data={summaryData.graph_data}>
@@ -469,6 +469,41 @@ function App() {
                 </LineChart>
               </ResponsiveContainer>
             </div>
+
+            {summaryData.xai_metrics && (
+              <div className="xai-report" style={{ backgroundColor: '#1e1e1e', padding: '20px', borderRadius: '12px', marginTop: '20px', textAlign: 'left' }}>
+                <h3 style={{ color: '#00ffff', marginBottom: '15px', borderBottom: '1px solid #333', paddingBottom: '10px' }}>XAI & Forensics Report</h3>
+                
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px', marginBottom: '20px' }}>
+                  <div>
+                    <h4 style={{ color: '#aaa', fontSize: '0.9rem', marginBottom: '10px' }}>Mathematical Justification</h4>
+                    <ul style={{ listStyle: 'none', padding: 0, margin: 0, color: '#fff', fontSize: '0.95rem' }}>
+                      <li style={{ marginBottom: '5px' }}><strong>RMSE:</strong> {summaryData.xai_metrics.rmse}° <span style={{fontSize: '0.8rem', color: '#888'}}>(Lower is better)</span></li>
+                      <li style={{ marginBottom: '5px' }}><strong>Cosine Similarity:</strong> {summaryData.xai_metrics.cosine_similarity} <span style={{fontSize: '0.8rem', color: '#888'}}>(Closer to 1 is better)</span></li>
+                      <li style={{ marginBottom: '5px' }}><strong>Pearson Correlation (r):</strong> {summaryData.xai_metrics.pearson_r} <span style={{fontSize: '0.8rem', color: '#888'}}>(Closer to 1 is better)</span></li>
+                    </ul>
+                  </div>
+                  
+                  <div>
+                    <h4 style={{ color: '#aaa', fontSize: '0.9rem', marginBottom: '10px' }}>Classification Report</h4>
+                    <div style={{ marginBottom: '10px' }}>
+                      <strong style={{ color: '#fff' }}>Accuracy: </strong> 
+                      <span style={{ color: summaryData.xai_metrics.classification_accuracy >= 80 ? '#00ff00' : (summaryData.xai_metrics.classification_accuracy >= 50 ? '#ffff00' : '#ff4444'), fontWeight: 'bold' }}>
+                        {summaryData.xai_metrics.classification_accuracy}%
+                      </span>
+                    </div>
+                    <ul style={{ listStyle: 'none', padding: 0, margin: 0, color: '#fff', fontSize: '0.95rem' }}>
+                      {Object.entries(summaryData.xai_metrics.deviation_breakdown || {}).map(([key, value]) => (
+                        <li key={key} style={{ marginBottom: '5px', display: 'flex', justifyContent: 'space-between' }}>
+                          <span>{key}</span>
+                          <span style={{ backgroundColor: '#333', padding: '2px 8px', borderRadius: '4px' }}>{value} reps</span>
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                </div>
+              </div>
+            )}
 
             <button onClick={() => { setSummaryData(null); fetchStats(); }} className="submit-btn" style={{ marginTop: '30px' }}>
               Back to Main Menu
