@@ -202,82 +202,92 @@ function HaruhiDance({ onBack, activeStream }) {
 
   const [localStream, setLocalStream] = useState(null);
 
+  // Effect 1: Acquire camera stream once on mount (if no activeStream passed in)
   useEffect(() => {
-    // Reset state and ref to starting values on effect mount/remount
-    setDancePhase('ALIGNING');
-    dancePhaseRef.current = 'ALIGNING';
-    setScore(null);
-    setCountdown(5);
-
-    if (!activeStream && !localStream) {
+    if (!activeStream) {
       navigator.mediaDevices.getUserMedia({ video: { width: 1280, height: 720 } })
         .then(stream => {
           setLocalStream(stream);
         })
         .catch(e => console.error("Error accessing webcam", e));
-      return;
     }
+    // Cleanup: stop the locally-acquired stream when component unmounts
+    return () => {
+      if (!activeStream) {
+        setLocalStream(prev => {
+          if (prev) prev.getTracks().forEach(track => track.stop());
+          return null;
+        });
+      }
+    };
+  }, []); // runs once on mount
 
+  // Effect 2: Set up WebSocket + frame sending once a stream is available.
+  // We deliberately exclude localStream from deps to avoid re-running when it changes.
+  useEffect(() => {
     const streamToUse = activeStream || localStream;
+    if (!streamToUse) return; // Wait until stream is ready
 
-    if (streamToUse) {
-      videoRef.current.srcObject = streamToUse;
-      videoRef.current.play().catch(e => console.error("Error playing stream", e));
+    // Reset phase on first setup
+    setDancePhase('ALIGNING');
+    dancePhaseRef.current = 'ALIGNING';
+    setScore(null);
+    setCountdown(5);
 
-      wsRef.current = new WebSocket("ws://localhost:8000/ws/haruhi");
+    videoRef.current.srcObject = streamToUse;
+    videoRef.current.play().catch(e => console.error("Error playing stream", e));
 
-      wsRef.current.onopen = () => {
-        danceVideoRef.current.currentTime = 0;
-        animationFrameRef.current = requestAnimationFrame(processFrame);
-      };
+    wsRef.current = new WebSocket("ws://localhost:8000/ws/haruhi");
 
-      wsRef.current.onmessage = (event) => {
-        const data = JSON.parse(event.data);
-        console.log("Haruhi WS Message received:", data);
-        if (data.type === 'update') {
-          console.log("Drawing skeleton with", data.skeleton ? data.skeleton.length : 0, "hinges.");
-          drawSkeleton(data.skeleton);
-          
-          setDancePhase((prevPhase) => {
-            if (prevPhase === 'ALIGNING' && data.state === 'DANCING') {
-              console.log("Aligned! Transitioning from ALIGNING to POSITIONED");
-              dancePhaseRef.current = 'POSITIONED';
-              return 'POSITIONED';
-            }
-            if (prevPhase === 'POSITIONED' && data.state === 'ALIGNING') {
-              console.log("Lost alignment during POSITIONED phase! Resetting to ALIGNING");
-              dancePhaseRef.current = 'ALIGNING';
-              return 'ALIGNING';
-            }
-            if (prevPhase === 'COUNTDOWN' && data.state === 'ALIGNING') {
-              console.log("Lost alignment during countdown! Transitioning from COUNTDOWN to ALIGNING");
-              dancePhaseRef.current = 'ALIGNING';
-              return 'ALIGNING';
-            }
-            dancePhaseRef.current = prevPhase;
-            return prevPhase;
-          });
+    wsRef.current.onopen = () => {
+      danceVideoRef.current.currentTime = 0;
+      animationFrameRef.current = requestAnimationFrame(processFrame);
+    };
 
-          if (dancePhaseRef.current !== 'FINISHED') {
-            console.log("Scheduling next processFrame callback. Phase:", dancePhaseRef.current);
-            animationFrameRef.current = requestAnimationFrame(processFrame);
+    wsRef.current.onmessage = (event) => {
+      const data = JSON.parse(event.data);
+      console.log("Haruhi WS Message received:", data);
+      if (data.type === 'update') {
+        console.log("Drawing skeleton with", data.skeleton ? data.skeleton.length : 0, "hinges.");
+        drawSkeleton(data.skeleton);
+        
+        setDancePhase((prevPhase) => {
+          if (prevPhase === 'ALIGNING' && data.state === 'DANCING') {
+            console.log("Aligned! Transitioning from ALIGNING to POSITIONED");
+            dancePhaseRef.current = 'POSITIONED';
+            return 'POSITIONED';
           }
-        } else if (data.type === 'summary') {
-          console.log("Dance finished, summary score received:", data.score);
-          setScore(data.score);
-          playCheer();
-          stopDance(false);
+          if (prevPhase === 'POSITIONED' && data.state === 'ALIGNING') {
+            console.log("Lost alignment during POSITIONED phase! Resetting to ALIGNING");
+            dancePhaseRef.current = 'ALIGNING';
+            return 'ALIGNING';
+          }
+          if (prevPhase === 'COUNTDOWN' && data.state === 'ALIGNING') {
+            console.log("Lost alignment during countdown! Transitioning from COUNTDOWN to ALIGNING");
+            dancePhaseRef.current = 'ALIGNING';
+            return 'ALIGNING';
+          }
+          dancePhaseRef.current = prevPhase;
+          return prevPhase;
+        });
+
+        if (dancePhaseRef.current !== 'FINISHED') {
+          console.log("Scheduling next processFrame callback. Phase:", dancePhaseRef.current);
+          animationFrameRef.current = requestAnimationFrame(processFrame);
         }
-      };
-    }
+      } else if (data.type === 'summary') {
+        console.log("Dance finished, summary score received:", data.score);
+        setScore(data.score);
+        playCheer();
+        stopDance(false);
+      }
+    };
 
     return () => {
       stopDance(false);
-      if (localStream) {
-        localStream.getTracks().forEach(track => track.stop());
-      }
     };
-  }, [activeStream, localStream]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [activeStream || localStream ? 'ready' : 'waiting']);
 
   // When phase changes to COUNTDOWN, start the 5 second interval
   useEffect(() => {
