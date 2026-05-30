@@ -163,7 +163,8 @@ async def websocket_endpoint(websocket: WebSocket):
                         score=score_rounded,
                         tempo=avg_rep_time,
                         consistency=rep_consistency,
-                        dtw_score=round(dtw_score, 1) if type(dtw_score) == float else dtw_score
+                        dtw_score=round(dtw_score, 1) if type(dtw_score) == float else dtw_score,
+                        form_fault="Excessive ROM (Went too deep)" if is_overshoot else "Shallow Depth (Did not go deep enough)" if score_rounded < 9 else "None"
                     )
                     
                     if tool_action:
@@ -361,7 +362,7 @@ async def analyze_video(
         # --- NEW: DTW EVALUATION ---
         df_full = pd.read_csv(output_csv_path)
         data_log_full = df_full.to_dict('records')
-        dtw_score, graph_data = build_multi_rep_dtw(
+        dtw_score, graph_data, final_xai = build_multi_rep_dtw(
             data_log_full, all_reps_data, rules, rules.get('template_csv')
         )
         
@@ -407,6 +408,8 @@ async def analyze_video(
             except Exception:
                 pass
         
+        is_overshoot = (target_angle < start_angle and lowest_angle < target_angle) or (target_angle > start_angle and lowest_angle > target_angle)
+
         # 3. Ask Groq for the feedback
         feedback, tool_action = generate_coach_feedback(
             exercise_name=rules["name"],
@@ -416,7 +419,8 @@ async def analyze_video(
             score=score_rounded,
             tempo=avg_rep_time,
             consistency=rep_consistency,
-            dtw_score=round(dtw_score, 1) if type(dtw_score) == float else dtw_score
+            dtw_score=round(dtw_score, 1) if type(dtw_score) == float else dtw_score,
+            form_fault="Excessive ROM (Went too deep)" if is_overshoot else "Shallow Depth (Did not go deep enough)" if score_rounded < 9 else "None"
         )
         
         if tool_action:
@@ -443,7 +447,8 @@ async def analyze_video(
             "skeleton_data": skeleton_data,
             "fps": fps,
             "graph_data": graph_data,
-            "target_angle": target_angle
+            "target_angle": target_angle,
+            "xai_metrics": final_xai
         }
 
     except Exception as e:

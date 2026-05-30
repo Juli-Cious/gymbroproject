@@ -26,7 +26,7 @@ import re
 
 WORKOUT_MEMORY = []
 
-def generate_coach_feedback(exercise_name, reps_completed, lowest_angle, target_angle, score, tempo=None, consistency=None, dtw_score=None):
+def generate_coach_feedback(exercise_name, reps_completed, lowest_angle, target_angle, score, tempo=None, consistency=None, dtw_score=None, form_fault=None):
     """
     Sends the user's biomechanical FSM data to Groq (Llama 3) for real-time feedback.
     Features Autonomous Analysis, Memory, and Tool Use.
@@ -57,6 +57,7 @@ def generate_coach_feedback(exercise_name, reps_completed, lowest_angle, target_
     - Tempo: {tempo}s
     - Consistency: {consistency}
     - DTW Cadence Error: {dtw_score}
+    - Primary Form Fault: {form_fault if form_fault else "None"}
     
     Past Workout Memory:
     {memory_context}
@@ -161,6 +162,7 @@ if __name__ == "__main__":
         reps_completed=1,
         lowest_angle=81.2,
         target_angle=60,
-        score=5.8
+        score=5.8,
+        form_fault="Shallow Depth"
     )
     print(f"\nHERCULES AI SAYS:\n{feedback}")

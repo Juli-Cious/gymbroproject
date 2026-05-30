@@ -478,9 +478,9 @@ function App() {
                   <div>
                     <h4 style={{ color: '#aaa', fontSize: '0.9rem', marginBottom: '10px' }}>Mathematical Justification</h4>
                     <ul style={{ listStyle: 'none', padding: 0, margin: 0, color: '#fff', fontSize: '0.95rem' }}>
-                      <li style={{ marginBottom: '5px' }}><strong>RMSE:</strong> {summaryData.xai_metrics.rmse}° <span style={{fontSize: '0.8rem', color: '#888'}}>(Lower is better)</span></li>
-                      <li style={{ marginBottom: '5px' }}><strong>Cosine Similarity:</strong> {summaryData.xai_metrics.cosine_similarity} <span style={{fontSize: '0.8rem', color: '#888'}}>(Closer to 1 is better)</span></li>
-                      <li style={{ marginBottom: '5px' }}><strong>Pearson Correlation (r):</strong> {summaryData.xai_metrics.pearson_r} <span style={{fontSize: '0.8rem', color: '#888'}}>(Closer to 1 is better)</span></li>
+                      <li style={{ marginBottom: '10px' }}><strong>RMSE:</strong> {summaryData.xai_metrics.rmse}° <span style={{fontSize: '0.8rem', color: '#888'}}>(Lower is better)</span><br/><span style={{fontSize: '0.85rem', color: '#aaa'}}>Measures average joint deviation from perfect form.</span></li>
+                      <li style={{ marginBottom: '10px' }}><strong>Cosine Similarity:</strong> {summaryData.xai_metrics.cosine_similarity} <span style={{fontSize: '0.8rem', color: '#888'}}>(Closer to 1 is better)</span><br/><span style={{fontSize: '0.85rem', color: '#aaa'}}>Measures overall movement shape and trajectory match.</span></li>
+                      <li style={{ marginBottom: '10px' }}><strong>Pearson Correlation (r):</strong> {summaryData.xai_metrics.pearson_r} <span style={{fontSize: '0.8rem', color: '#888'}}>(Closer to 1 is better)</span><br/><span style={{fontSize: '0.85rem', color: '#aaa'}}>Measures pacing consistency and timing alignment.</span></li>
                     </ul>
                   </div>
                   
